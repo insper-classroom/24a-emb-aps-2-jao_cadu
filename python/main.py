@@ -24,8 +24,8 @@ teclado = uinput.Device([
 def parse_data(data):
 	axis = data[0]  # 0 for X, 1 for Y
 	value = int.from_bytes(data[1:3], byteorder='little', signed=True)
-	print(f"Received data: {data}")
-	print(f"axis: {axis}, value: {value}")
+	# print(f"Received data: {data}")
+	# print(f"axis: {axis}, value: {value}")
 	return axis, value
 	
 
@@ -50,21 +50,19 @@ try:
 		data = ser.read(4)
 		print("Data lido :  ", data)
 		print("Dicionario :  ", data[0])
+	
 		if data[0] == 1:
 			axis, value = parse_data(data[1:4])
 			move_mouse(axis, value)
-			print(f"Received data joy stick:")
-			print(f"axis: {axis}, value: {value}")
+			# print(f"Received data joy stick:")
+			# print(f"axis: {axis}, value: {value}")
 		elif data[0] == 2:
 			value = int.from_bytes(data[1], byteorder='little', signed=True)
 		elif data[0] == 3:
-			value = int.from_bytes(data[1], byteorder='little', signed=True)
-			# print("Apertou no espaço")
-			# axis, value =parse_data(data[1:4])
-			# if axis==3:
-			# 	teclado.emit(uinput.KEY_SPACE, 1)  # Press space key
-			# 	time.sleep(100)
-			# 	teclado.emit(uinput.KEY_SPACE, 0)  # Release space key
+			# value = int.from_bytes(data[1], byteorder='little', signed=True)
+			print("Apertou no espaço")
+			axis, value =parse_data(data[1:4])
+			teclado.emit(uinput.KEY_SPACE, value)
 
 			
 

@@ -14,6 +14,11 @@ const uint ADC_PIN_Y1 = 27; // GPIO 27, ADC Channel 1
 
 const uint BUTTON_PIN = 15;
 
+#define DEBOUNCE_TIME_MS 50  // Tempo de debounce em milissegundos
+
+// Variável para armazenar a última vez que o botão foi pressionado
+static uint32_t lastDebounceTime = 0;
+
 QueueHandle_t xQueueAdcData;
 QueueHandle_t xQueueCommands;
 
@@ -91,22 +96,27 @@ void y1_task(void *params) {
 
 
 
-// void button_space_task(void *params) {
-//     joystick_data_t data = {.dici = 2, .axis = -1, .val = 3};
-//     bool buttonPressed = false;
 
-//     while (1) {
-//         if (gpio_get(BUTTON_PIN) == 0) {  // Se o botão estiver pressionado (leitura baixa)
-//             if (!buttonPressed) {  // Verifica se o botão foi apenas pressionado
-//                 buttonPressed = true;
-//                 xQueueSend(xQueueAdcData, &data, portMAX_DELAY);
-//             }
-//         } else {
-//             buttonPressed = false;  // Reseta o estado quando o botão é solto
-//         }
-//         vTaskDelay(pdMS_TO_TICKS(50));  // Debounce delay
-//     }
-// }
+void btn_callback(uint gpio, uint32_t events) {
+    uint32_t currentTime = xTaskGetTickCount() * portTICK_PERIOD_MS;
+
+    // Verifique se o tempo desde a última interrupção é maior que o tempo de debounce
+    if ((currentTime - lastDebounceTime) > DEBOUNCE_TIME_MS) {
+        if (events == 0x4) {  // fall edge
+            if (gpio == BUTTON_PIN) {
+                joystick_data_t data = {.dici = 3, .axis = 0, .val = 1};
+                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
+            }
+        } else if (events == 0x8) {  // rise edge
+            if (gpio == BUTTON_PIN) {
+                joystick_data_t data = {.dici = 3, .axis = 0, .val = 0};
+                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
+            }
+        }
+        // Atualize o último tempo de debounce processado
+        lastDebounceTime = currentTime;
+    }
+}
 
 
 // Função para formatar e enviar dados ou comandos via UART
@@ -138,10 +148,12 @@ void write_package(joystick_data_t data) {
         uart_putc_raw(uart0, 0);  
         uart_putc_raw(uart0, -1);
     }else if(data.dici == 3){
+        int msb = data.val >> 8;
+        int lsb = data.val & 0xFF;
         uart_putc_raw(uart0, 3);  
-        uart_putc_raw(uart0, 0);  
-        uart_putc_raw(uart0, 0);  
-        uart_putc_raw(uart0, 0);  
+        uart_putc_raw(uart0, data.axis);  
+        uart_putc_raw(uart0, lsb);
+        uart_putc_raw(uart0, msb);
         uart_putc_raw(uart0, -1);
     }
 }
@@ -170,9 +182,14 @@ int main() {
     adc_gpio_init(ADC_PIN_X1);
     adc_gpio_init(ADC_PIN_Y1);
     // adc_gpio_init(ADC_PIN_X2);
-    // gpio_init(BUTTON_PIN);
-    // gpio_set_dir(BUTTON_PIN, GPIO_IN);
-    // gpio_pull_up(BUTTON_PIN);
+    gpio_init(BUTTON_PIN);
+    gpio_set_dir(BUTTON_PIN, GPIO_IN);
+    gpio_pull_up(BUTTON_PIN);
+    gpio_set_irq_enabled_with_callback(BUTTON_PIN, 
+                                     GPIO_IRQ_EDGE_RISE | 
+                                     GPIO_IRQ_EDGE_FALL, 
+                                     true,
+                                     &btn_callback);
 
 
     xQueueAdcData = xQueueCreate(10, sizeof(joystick_data_t));
@@ -183,7 +200,6 @@ int main() {
     xTaskCreate(y1_task, "Y1_Task", 256, NULL, 1, NULL);
     // xTaskCreate(x2_task, "X2_Task", 256, NULL, 1, NULL);
     // xTaskCreate(y2_task, "Y2_Task", 256, NULL, 1, NULL);
-    // xTaskCreate(button_space_task, "button_space_task", 256, NULL, 1, NULL);
     xTaskCreate(uart_task, "UART_Task", 256, NULL, 1, NULL);
 
     vTaskStartScheduler(); // Inicia o escalonador
