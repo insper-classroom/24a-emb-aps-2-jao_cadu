@@ -13,14 +13,21 @@ const uint ADC_PIN_Y1 = 27; // GPIO 27, ADC Channel 1
 // const uint ADC_PIN_X2 = 28; // GPIO 28, ADC Channel 2
 
 const uint BUTTON_PIN = 15;
+const uint BUTTON_E_PIN = 16;
+const uint BUTTON_CTRL_PIN = 17;
+const uint BUTTON_SHIFT_PIN = 18;
+
 
 #define DEBOUNCE_TIME_MS 50  // Tempo de debounce em milissegundos
 
 // Variável para armazenar a última vez que o botão foi pressionado
-static uint32_t lastDebounceTime = 0;
+static uint32_t lastDebounceTimeButton = 0;
+static uint32_t lastDebounceTimeButtonE = 0;
+static uint32_t lastDebounceTimeButtonCtrl = 0;
+static uint32_t lastDebounceTimeButtonShift = 0;
 
 QueueHandle_t xQueueAdcData;
-QueueHandle_t xQueueCommands;
+//QueueHandle_t xQueueCommands;
 
 typedef struct {
     int dici;  // Dicionario [1 -- joystick, 2 -- AWSD, 3 -- Botoes]
@@ -98,27 +105,47 @@ void y1_task(void *params) {
 
 
 void btn_callback(uint gpio, uint32_t events) {
+    
     uint32_t currentTime = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
     // Verifique se o tempo desde a última interrupção é maior que o tempo de debounce
-    if ((currentTime - lastDebounceTime) > DEBOUNCE_TIME_MS) {
+    if ((currentTime - lastDebounceTimeButton) > DEBOUNCE_TIME_MS) {
         if (events == 0x4) {  // fall edge
             if (gpio == BUTTON_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 0, .val = 1};
+                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
+            }if (gpio == BUTTON_E_PIN) {
+                joystick_data_t data = {.dici = 3, .axis = 1, .val = 1};
+                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
+            }if (gpio == BUTTON_CTRL_PIN) {
+                joystick_data_t data = {.dici = 3, .axis = 2, .val = 1};
+                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
+            }if (gpio == BUTTON_CTRL_PIN) {
+                joystick_data_t data = {.dici = 3, .axis = 2, .val = 1};
                 xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
             }
         } else if (events == 0x8) {  // rise edge
             if (gpio == BUTTON_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 0, .val = 0};
                 xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
+            }if (gpio == BUTTON_E_PIN) {
+                joystick_data_t data = {.dici = 3, .axis = 1, .val = 0};
+                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
+            }if (gpio == BUTTON_CTRL_PIN) {
+                joystick_data_t data = {.dici = 3, .axis = 2, .val = 0};
+                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
+            }if (gpio == BUTTON_SHIFT_PIN) {
+                joystick_data_t data = {.dici = 3, .axis = 3, .val = 0};
+                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
             }
         }
         // Atualize o último tempo de debounce processado
-        lastDebounceTime = currentTime;
+        lastDebounceTimeButton = currentTime;
+        lastDebounceTimeButtonE = currentTime;
+        lastDebounceTimeButtonCtrl = currentTime;
+        lastDebounceTimeButtonShift = currentTime;
     }
 }
-
-
 // Função para formatar e enviar dados ou comandos via UART
 void write_package(joystick_data_t data) {
 
@@ -168,12 +195,8 @@ void uart_task(void *params) {
         // if (xQueueReceive(xQueueCommands, &data, portMAX_DELAY)) {
         //     write_package(data);
         // }
-    }
-}
-
-
-
-int main() {
+    }  
+}int main() {
     stdio_init_all();
     adc_init(); // Inicializa o ADC
     uart_init(uart0, 115200);  // Configura a UART0 para 115200 bps
@@ -185,15 +208,41 @@ int main() {
     gpio_init(BUTTON_PIN);
     gpio_set_dir(BUTTON_PIN, GPIO_IN);
     gpio_pull_up(BUTTON_PIN);
-    gpio_set_irq_enabled_with_callback(BUTTON_PIN, 
+    gpio_init(BUTTON_E_PIN);
+    gpio_set_dir(BUTTON_E_PIN, GPIO_IN);
+    gpio_pull_up(BUTTON_E_PIN);
+    gpio_init(BUTTON_SHIFT_PIN);
+    gpio_set_dir(BUTTON_SHIFT_PIN, GPIO_IN);
+    gpio_pull_up(BUTTON_SHIFT_PIN);
+    gpio_init(BUTTON_CTRL_PIN);
+    gpio_set_dir(BUTTON_CTRL_PIN, GPIO_IN);
+    gpio_pull_up(BUTTON_CTRL_PIN);
+    gpio_set_irq_enabled_with_callback(BUTTON_PIN,
                                      GPIO_IRQ_EDGE_RISE | 
                                      GPIO_IRQ_EDGE_FALL, 
                                      true,
                                      &btn_callback);
+    gpio_set_irq_enabled_with_callback(BUTTON_E_PIN,
+                                     GPIO_IRQ_EDGE_RISE | 
+                                     GPIO_IRQ_EDGE_FALL, 
+                                     true,
+                                     &btn_callback);
+    gpio_set_irq_enabled_with_callback(BUTTON_SHIFT_PIN,
+                                     GPIO_IRQ_EDGE_RISE | 
+                                     GPIO_IRQ_EDGE_FALL, 
+                                     true,
+                                     &btn_callback);
+    gpio_set_irq_enabled_with_callback(BUTTON_CTRL_PIN,
+                                     GPIO_IRQ_EDGE_RISE | 
+                                     GPIO_IRQ_EDGE_FALL, 
+                                     true,
+                                     &btn_callback);
+    
+    
 
 
     xQueueAdcData = xQueueCreate(10, sizeof(joystick_data_t));
-    xQueueCommands = xQueueCreate(10, sizeof(joystick_data_t));
+    //xQueueCommands = xQueueCreate(10, sizeof(joystick_data_t));
 
     // Cria tarefas para cada eixo de cada joystick
     xTaskCreate(x1_task, "X1_Task", 256, NULL, 1, NULL);
@@ -207,4 +256,3 @@ int main() {
     while (true); // O loop principal não deve ser alcançado
     return 0;
 }
-

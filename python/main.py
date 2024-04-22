@@ -17,6 +17,8 @@ device = uinput.Device([
 teclado = uinput.Device([
 	uinput.KEY_SPACE,
 	uinput.KEY_E,
+	uinput.KEY_LEFTSHIFT, 
+    uinput.KEY_LEFTCTRL,
 ])
 
 
@@ -40,7 +42,7 @@ def move_mouse(axis, value):
 try:
 	# sync package
 	while True:
-		print('Waiting for sync package...')
+		# print('Waiting for sync package...')
 		while True:
 			data = ser.read(1)
 			if data == b'\xff':
@@ -48,8 +50,8 @@ try:
 
 		# Read 3 bytes from UART
 		data = ser.read(4)
-		print("Data lido :  ", data)
-		print("Dicionario :  ", data[0])
+		# print("Data lido :  ", data)
+		# print("Dicionario :  ", data[0])
 	
 		if data[0] == 1:
 			axis, value = parse_data(data[1:4])
@@ -59,10 +61,21 @@ try:
 		elif data[0] == 2:
 			value = int.from_bytes(data[1], byteorder='little', signed=True)
 		elif data[0] == 3:
+			print("Data lido :  ", data)
+			print("Dicionario :  ", data[0])
 			# value = int.from_bytes(data[1], byteorder='little', signed=True)
 			print("Apertou no espaço")
-			axis, value =parse_data(data[1:4])
-			teclado.emit(uinput.KEY_SPACE, value)
+			axis, value = parse_data(data[1:4])
+			if axis == 0:
+				teclado.emit(uinput.KEY_SPACE, value)
+			elif axis == 1:
+				teclado.emit(uinput.KEY_E, value)
+			elif axis == 2:
+				teclado.emit(uinput.KEY_LEFTCTRL, value)
+			elif axis == 3:
+				teclado.emit(uinput.KEY_LEFTSHIFT, value)
+
+
 
 			
 
