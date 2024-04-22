@@ -6,6 +6,11 @@
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include "hardware/adc.h"
+#include <semphr.h>
+
+#include <string.h>
+
+#include "hc06.h"
 
 // Definições dos pinos para os joysticks
 const uint ADC_PIN_X1 = 26; // GPIO 26, ADC Channel 0
@@ -34,7 +39,75 @@ typedef struct {
     int axis;  // 0 para X, 1 para Y
     int val;  // valor ou botao
 } joystick_data_t;
+ 
 
+void write_package(joystick_data_t data) {
+
+    //printf("%d /n",data.dici);
+
+    if (data.dici == 1){
+        int msb = data.val >> 8;
+        int lsb = data.val & 0xFF;
+        //printf("DENTRO DICI_1 /n");
+        uart_putc_raw(uart0, 1);  
+        uart_putc_raw(uart0, data.axis);  
+        uart_putc_raw(uart0, lsb);
+        uart_putc_raw(uart0, msb);
+        uart_putc_raw(uart0, -1);
+    }else if(data.dici == 2){
+        uart_putc_raw(uart0, 2);  
+        if(data.val == 1){
+            uart_putc_raw(uart0, 1);  
+        }else if(data.val == 2){
+            uart_putc_raw(uart0, 2); 
+        }else if(data.val == 3){
+            uart_putc_raw(uart0, 3); 
+        }else if(data.val == 4){
+            uart_putc_raw(uart0, 4); 
+        }
+        uart_putc_raw(uart0, 0);  
+        uart_putc_raw(uart0, 0);  
+        uart_putc_raw(uart0, -1);
+    }else if(data.dici == 3){
+        int msb = data.val >> 8;
+        int lsb = data.val & 0xFF;
+        uart_putc_raw(uart0, 3);  
+        uart_putc_raw(uart0, data.axis);  
+        uart_putc_raw(uart0, lsb);
+        uart_putc_raw(uart0, msb);
+        uart_putc_raw(uart0, -1);
+    }
+}
+
+void hc06_task(void *params) {
+
+    uart_init(HC06_UART_ID, HC06_BAUD_RATE);
+    gpio_set_function(HC06_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(HC06_RX_PIN, GPIO_FUNC_UART);
+    hc06_init("APS2_JK", "1234");
+
+
+    joystick_data_t data;
+    while (1) {
+        if (xQueueReceive(xQueueAdcData, &data, portMAX_DELAY)) {
+            // printf("foi");
+            write_package(data);
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+// Tarefa UART revisada para usar write_package
+// void uart_task(void *params) {
+//     joystick_data_t data;
+//     while (1) {
+//         if (xQueueReceive(xQueueAdcData, &data, portMAX_DELAY)) {
+//             write_package(data);
+//         }
+//         // if (xQueueReceive(xQueueCommands, &data, portMAX_DELAY)) {
+//         //     write_package(data);
+//         // }
+//     }
+// }
 
 // Tarefas para o joystick 1
 void x1_task(void *params) {
@@ -120,8 +193,8 @@ void btn_callback(uint gpio, uint32_t events) {
             }if (gpio == BUTTON_CTRL_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 2, .val = 1};
                 xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
-            }if (gpio == BUTTON_CTRL_PIN) {
-                joystick_data_t data = {.dici = 3, .axis = 2, .val = 1};
+            }if (gpio == BUTTON_SHIFT_PIN) {
+                joystick_data_t data = {.dici = 3, .axis = 3, .val = 1};
                 xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
             }
         } else if (events == 0x8) {  // rise edge
@@ -147,56 +220,8 @@ void btn_callback(uint gpio, uint32_t events) {
     }
 }
 // Função para formatar e enviar dados ou comandos via UART
-void write_package(joystick_data_t data) {
 
-    //printf("%d /n",data.dici);
-
-    if (data.dici == 1){
-        int msb = data.val >> 8;
-        int lsb = data.val & 0xFF;
-        //printf("DENTRO DICI_1 /n");
-        uart_putc_raw(uart0, 1);  
-        uart_putc_raw(uart0, data.axis);  
-        uart_putc_raw(uart0, lsb);
-        uart_putc_raw(uart0, msb);
-        uart_putc_raw(uart0, -1);
-    }else if(data.dici == 2){
-        uart_putc_raw(uart0, 2);  
-        if(data.val == 1){
-            uart_putc_raw(uart0, 1);  
-        }else if(data.val == 2){
-            uart_putc_raw(uart0, 2); 
-        }else if(data.val == 3){
-            uart_putc_raw(uart0, 3); 
-        }else if(data.val == 4){
-            uart_putc_raw(uart0, 4); 
-        }
-        uart_putc_raw(uart0, 0);  
-        uart_putc_raw(uart0, 0);  
-        uart_putc_raw(uart0, -1);
-    }else if(data.dici == 3){
-        int msb = data.val >> 8;
-        int lsb = data.val & 0xFF;
-        uart_putc_raw(uart0, 3);  
-        uart_putc_raw(uart0, data.axis);  
-        uart_putc_raw(uart0, lsb);
-        uart_putc_raw(uart0, msb);
-        uart_putc_raw(uart0, -1);
-    }
-}
-
-// Tarefa UART revisada para usar write_package
-void uart_task(void *params) {
-    joystick_data_t data;
-    while (1) {
-        if (xQueueReceive(xQueueAdcData, &data, portMAX_DELAY)) {
-            write_package(data);
-        }
-        // if (xQueueReceive(xQueueCommands, &data, portMAX_DELAY)) {
-        //     write_package(data);
-        // }
-    }  
-}int main() {
+int main() {
     stdio_init_all();
     adc_init(); // Inicializa o ADC
     uart_init(uart0, 115200);  // Configura a UART0 para 115200 bps
@@ -239,17 +264,17 @@ void uart_task(void *params) {
                                      &btn_callback);
     
     
-
-
     xQueueAdcData = xQueueCreate(10, sizeof(joystick_data_t));
     //xQueueCommands = xQueueCreate(10, sizeof(joystick_data_t));
+    // printf("Start bluetooth task\n");
 
     // Cria tarefas para cada eixo de cada joystick
     xTaskCreate(x1_task, "X1_Task", 256, NULL, 1, NULL);
     xTaskCreate(y1_task, "Y1_Task", 256, NULL, 1, NULL);
+    xTaskCreate(hc06_task, "UART_Task 1", 4096, NULL, 1, NULL);
     // xTaskCreate(x2_task, "X2_Task", 256, NULL, 1, NULL);
     // xTaskCreate(y2_task, "Y2_Task", 256, NULL, 1, NULL);
-    xTaskCreate(uart_task, "UART_Task", 256, NULL, 1, NULL);
+    // xTaskCreate(uart_task, "UART_Task", 256, NULL, 1, NULL);
 
     vTaskStartScheduler(); // Inicia o escalonador
 
