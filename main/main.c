@@ -33,6 +33,7 @@ static uint32_t lastDebounceTimeButtonShift = 0;
 QueueHandle_t xQueueAdcData;
 QueueHandle_t xQueueButtonData;
 //QueueHandle_t xQueueCommands;
+SemaphoreHandle_t xSemaphoreTremor;
 
 typedef struct {
     int dici;  // Dicionario [1 -- joystick, 2 -- AWSD, 3 -- Botoes]
@@ -204,12 +205,15 @@ void btn_callback(uint gpio, uint32_t events) {
         if (events == 0x4) {  // fall edge
             if (gpio == BUTTON_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 0, .val = 1};
+                xSemaphoreGiveFromISR(xSemaphoreTremor, NULL);
                 xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_E_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 1, .val = 1};
+                xSemaphoreGiveFromISR(xSemaphoreTremor, NULL);
                 xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_CTRL_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 2, .val = 1};
+                xSemaphoreGiveFromISR(xSemaphoreTremor, NULL);
                 xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_SHIFT_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 3, .val = 1};
@@ -238,6 +242,15 @@ void btn_callback(uint gpio, uint32_t events) {
 // Função para formatar e enviar dados ou comandos via UART
 
 
+void tremor_task(void *params) {
+    while (1) {
+        if (xSemaphoreTake(xSemaphoreTremor, portMAX_DELAY) == pdTRUE) {
+            gpio_put(TREMER_PIN, 1);  // Ligar tremor
+            vTaskDelay(pdMS_TO_TICKS(200)); // Tremor ligado por 200 ms
+            gpio_put(TREMER_PIN, 0);  // Desligar tremor
+        }
+    }
+}
 int main() {
     stdio_init_all();
     adc_init(); // Inicializa o ADC
@@ -290,6 +303,8 @@ int main() {
     xQueueAdcData = xQueueCreate(2, sizeof(joystick_data_t));
     xQueueButtonData = xQueueCreate(10, sizeof(joystick_data_t));
 
+    xSemaphoreTremor = xSemaphoreCreateBinary();
+
     //xQueueCommands = xQueueCreate(10, sizeof(joystick_data_t));
     // printf("Start bluetooth task\n");
 
@@ -297,7 +312,8 @@ int main() {
     xTaskCreate(x1_task, "X1_Task", 256, NULL, 1, NULL);
     xTaskCreate(y1_task, "Y1_Task", 256, NULL, 1, NULL);
     xTaskCreate(hc06_task, "UART_Task 1", 4096, NULL, 1, NULL);
-    // xTaskCreate(x2_task, "X2_Task", 256, NULL, 1, NULL);
+    //xTaskCreate(tremor_task, "Tremor_Task", 256, NULL, 1, NULL);
+     // xTaskCreate(x2_task, "X2_Task", 256, NULL, 1, NULL);
     // xTaskCreate(y2_task, "Y2_Task", 256, NULL, 1, NULL);
     // xTaskCreate(uart_task, "UART_Task", 256, NULL, 1, NULL);
 
