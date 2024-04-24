@@ -3,7 +3,9 @@ import uinput
 import pynput.keyboard
 import time
 
-ser = serial.Serial('/dev/rfcomm1', 115200, timeout = 10)
+ser = serial.Serial('/dev/rfcomm1', 9600)
+# ser = serial.Serial('/dev/ttyACM0', 115200)
+
 
 # Create new mouse device
 device = uinput.Device([
@@ -41,42 +43,46 @@ def move_mouse(axis, value):
 
 try:
 	# sync package
+	
 	while True:
 		print('Waiting for sync package...')
 		while True:
-			data = ser.read(1)
-			if (data):
-				print("HELLO THERE", data)
-			if data == b'\xff':		
-				print("GENERAL KENOBI  ", data)
-				break
+			print("entrou")
+			data=ser.read(1)
+			print("ola")
+			print(data)
+		# 	data = ser.read(1)
+		# 	print(data)
+		# 	if data == b'\xff':		
+		# 		# print("GENERAL KENOBI  ", data)
+		# 		break
 
-		# Read 3 bytes from UART
-		data = ser.read(4)
-		print("Data lido :  ", data)
-		print("Dicionario :  ", data[0])
+		# # Read 3 bytes from UART
+		# data = ser.read(4)
+		# print("Data lido :  ", data)
+		# print("Dicionario :  ", data[0])
 	
-		if data[0] == 1:
-			axis, value = parse_data(data[1:4])
-			move_mouse(axis, value)
-			# print(f"Received data joy stick:")
-			# print(f"axis: {axis}, value: {value}")
-		elif data[0] == 2:
-			value = int.from_bytes(data[1], byteorder='little', signed=True)
-		elif data[0] == 3:
-			# print("Data lido :  ", data)
-			# print("Dicionario :  ", data[0])
-			# value = int.from_bytes(data[1], byteorder='little', signed=True)
-			# print("Apertou no espaço")
-			axis, value = parse_data(data[1:4])
-			if axis == 0:
-				teclado.emit(uinput.KEY_SPACE, value)
-			elif axis == 1:
-				teclado.emit(uinput.KEY_E, value)
-			elif axis == 2:
-				teclado.emit(uinput.KEY_LEFTCTRL, value)
-			elif axis == 3:
-				teclado.emit(uinput.KEY_LEFTSHIFT, value)
+		# if data[0] == 1:
+		# 	axis, value = parse_data(data[1:4])
+		# 	move_mouse(axis, value)
+		# 	# print(f"Received data joy stick:")
+		# 	# print(f"axis: {axis}, value: {value}")
+		# elif data[0] == 2:
+		# 	value = int.from_bytes(data[1], byteorder='little', signed=True)
+		# elif data[0] == 3:
+		# 	print("Data lido :  ", data)
+		# 	print("Dicionario :  ", data[0])
+		# 	# value = int.from_bytes(data[1], byteorder='little', signed=True)
+		# 	# print("Apertou no espaço")
+		# 	axis, value = parse_data(data[1:4])
+		# 	if axis == 0:
+		# 		teclado.emit(uinput.KEY_SPACE, value)
+		# 	elif axis == 1:
+		# 		teclado.emit(uinput.KEY_E, value)
+		# 	elif axis == 2:
+		# 		teclado.emit(uinput.KEY_LEFTCTRL, value)
+		# 	elif axis == 3:
+		# 		teclado.emit(uinput.KEY_LEFTSHIFT, value)
 
 
 

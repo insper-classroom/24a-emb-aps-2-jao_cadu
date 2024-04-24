@@ -84,37 +84,39 @@ void hc06_task(void *params) {
     uart_init(HC06_UART_ID, HC06_BAUD_RATE);
     gpio_set_function(HC06_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(HC06_RX_PIN, GPIO_FUNC_UART);
-    hc06_init("APS2_JK", "1234");
+    hc06_init("APS2_JB", "1234");
 
 
     joystick_data_t data;
     while (1) {
         if (xQueueReceive(xQueueAdcData, &data, portMAX_DELAY)) {
-            // printf("foi");
+           
             write_package(data);
+            printf("%d,%d",data.axis, data.val);
         }
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 // Tarefa UART revisada para usar write_package
-// void uart_task(void *params) {
-//     joystick_data_t data;
-//     while (1) {
-//         if (xQueueReceive(xQueueAdcData, &data, portMAX_DELAY)) {
-//             write_package(data);
-//         }
-//         // if (xQueueReceive(xQueueCommands, &data, portMAX_DELAY)) {
-//         //     write_package(data);
-//         // }
-//     }
-// }
+void uart_task(void *params) {
+    joystick_data_t data;
+    while (1) {
+        if (xQueueReceive(xQueueAdcData, &data, portMAX_DELAY)) {
+            // printf("Dicionario : %d, Axis : %d, Value : %d, ", data.dici, data.axis, data.val); 
+            write_package(data);
+        }
+        // if (xQueueReceive(xQueueCommands, &data, portMAX_DELAY)) {
+        //     write_package(data);
+        // }
+    }
+}
 
 // Tarefas para o joystick 1
 void x1_task(void *params) {
     joystick_data_t data = {.dici = 1, .axis = 0};
     while (1) {
         adc_select_input(0); // ADC Channel 0
-        if ((adc_read() - 2047) / 8 > -40 && (adc_read() - 2047) / 8 < 40) {
+        if ((adc_read() - 2047) / 8 > -170 && (adc_read() - 2047) / 8 < 170) {
             data.val = 0;
         } else {
             data.val = (adc_read() - 2047) / 12;  // Lê o valor ADC do eixo X
@@ -129,7 +131,7 @@ void y1_task(void *params) {
     joystick_data_t data = {.dici = 1, .axis = 1};
     while (1) {
         adc_select_input(1); // ADC Channel 1
-        if ((adc_read() - 2047) / 8 > -40 && (adc_read() - 2047) / 8 < 40) {
+        if ((adc_read() - 2047) / 8 > -170 && (adc_read() - 2047) / 8 < 170) {
             data.val = 0;
         } else {
             data.val = (adc_read() - 2047) / 12;  // Lê o valor ADC do eixo X
@@ -221,10 +223,12 @@ void btn_callback(uint gpio, uint32_t events) {
 }
 // Função para formatar e enviar dados ou comandos via UART
 
+
 int main() {
     stdio_init_all();
     adc_init(); // Inicializa o ADC
     uart_init(uart0, 115200);  // Configura a UART0 para 115200 bps
+    printf("HELLO WORLD");
 
     // Configura os pinos GPIO para o ADC
     adc_gpio_init(ADC_PIN_X1);
