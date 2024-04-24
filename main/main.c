@@ -217,6 +217,7 @@ void btn_callback(uint gpio, uint32_t events) {
                 xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_SHIFT_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 3, .val = 1};
+                xQueueSendToFront(xQueueButtonData, &data, 0);
             }
         } else if (events == 0x8) {  // rise edge
             if (gpio == BUTTON_PIN) {
@@ -230,6 +231,7 @@ void btn_callback(uint gpio, uint32_t events) {
                 xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_SHIFT_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 3, .val = 0};
+                xQueueSendToFront(xQueueButtonData, &data, 0);
             }
         }
         // Atualize o último tempo de debounce processado
@@ -251,6 +253,7 @@ void tremor_task(void *params) {
         }
     }
 }
+
 int main() {
     stdio_init_all();
     adc_init(); // Inicializa o ADC
