@@ -11,7 +11,6 @@
 #include <string.h>
 
 #include "hc06.h"
-
 // Definições dos pinos para os joysticks
 const uint ADC_PIN_X1 = 26; // GPIO 26, ADC Channel 0
 const uint ADC_PIN_Y1 = 27; // GPIO 27, ADC Channel 1
@@ -21,7 +20,7 @@ const uint BUTTON_PIN = 15;
 const uint BUTTON_E_PIN = 16;
 const uint BUTTON_CTRL_PIN = 17;
 const uint BUTTON_SHIFT_PIN = 18;
-
+const int TREMER_PIN = 9;
 
 #define DEBOUNCE_TIME_MS 50  // Tempo de debounce em milissegundos
 
@@ -32,6 +31,7 @@ static uint32_t lastDebounceTimeButtonCtrl = 0;
 static uint32_t lastDebounceTimeButtonShift = 0;
 
 QueueHandle_t xQueueAdcData;
+QueueHandle_t xQueueButtonData;
 //QueueHandle_t xQueueCommands;
 
 typedef struct {
@@ -49,33 +49,34 @@ void write_package(joystick_data_t data) {
         int msb = data.val >> 8;
         int lsb = data.val & 0xFF;
         //printf("DENTRO DICI_1 /n");
-        uart_putc_raw(uart0, 1);  
-        uart_putc_raw(uart0, data.axis);  
-        uart_putc_raw(uart0, lsb);
-        uart_putc_raw(uart0, msb);
-        uart_putc_raw(uart0, -1);
+        uart_putc_raw(HC06_UART_ID, 1);  
+        uart_putc_raw(HC06_UART_ID, data.axis);  
+        uart_putc_raw(HC06_UART_ID, lsb);
+        uart_putc_raw(HC06_UART_ID, msb);
+        uart_putc_raw(HC06_UART_ID, -1);
     }else if(data.dici == 2){
-        uart_putc_raw(uart0, 2);  
+        uart_putc_raw(HC06_UART_ID, 2);  
         if(data.val == 1){
-            uart_putc_raw(uart0, 1);  
+            uart_putc_raw(HC06_UART_ID, 1);  
         }else if(data.val == 2){
-            uart_putc_raw(uart0, 2); 
+            uart_putc_raw(HC06_UART_ID, 2); 
         }else if(data.val == 3){
-            uart_putc_raw(uart0, 3); 
+            uart_putc_raw(HC06_UART_ID, 3); 
         }else if(data.val == 4){
-            uart_putc_raw(uart0, 4); 
+            uart_putc_raw(HC06_UART_ID, 4); 
         }
-        uart_putc_raw(uart0, 0);  
-        uart_putc_raw(uart0, 0);  
-        uart_putc_raw(uart0, -1);
+        uart_putc_raw(HC06_UART_ID, 0);  
+        uart_putc_raw(HC06_UART_ID, 0);  
+        uart_putc_raw(HC06_UART_ID, -1);
     }else if(data.dici == 3){
         int msb = data.val >> 8;
         int lsb = data.val & 0xFF;
-        uart_putc_raw(uart0, 3);  
-        uart_putc_raw(uart0, data.axis);  
-        uart_putc_raw(uart0, lsb);
-        uart_putc_raw(uart0, msb);
-        uart_putc_raw(uart0, -1);
+        // printf("SERA??");
+        uart_putc_raw(HC06_UART_ID, 3);  
+        uart_putc_raw(HC06_UART_ID, data.axis);  
+        uart_putc_raw(HC06_UART_ID, lsb);
+        uart_putc_raw(HC06_UART_ID, msb);
+        uart_putc_raw(HC06_UART_ID, -1);
     }
 }
 
@@ -84,30 +85,40 @@ void hc06_task(void *params) {
     uart_init(HC06_UART_ID, HC06_BAUD_RATE);
     gpio_set_function(HC06_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(HC06_RX_PIN, GPIO_FUNC_UART);
-    hc06_init("APS2_JB", "1234");
+    //hc06_init("APS2_JB", "1234");
 
 
     joystick_data_t data;
     while (1) {
-        if (xQueueReceive(xQueueAdcData, &data, portMAX_DELAY)) {
-           
+        if (xQueueReceive(xQueueAdcData, &data, 1)) {
+            if(data.dici != 1){
+                // printf("Dicionario : %d, Axis : %d, Value : %d, ", data.dici, data.axis, data.val);                 
+            }
             write_package(data);
-            printf("%d,%d",data.axis, data.val);
+            vTaskDelay(10);
+            write_package(data);
+            //printf("%d,%d",data.axis, data.val);
         }
-        vTaskDelay(pdMS_TO_TICKS(100));
+        if  (xQueueReceive(xQueueButtonData, &data, 1)) {
+            if(data.dici != 1){
+                // printf("Dicionario : %d, Axis : %d, Value : %d, ", data.dici, data.axis, data.val);                 
+            }
+            write_package(data);
+            //printf("%d,%d",data.axis, data.val);
+        }
+       
     }
 }
 // Tarefa UART revisada para usar write_package
 void uart_task(void *params) {
     joystick_data_t data;
     while (1) {
-        if (xQueueReceive(xQueueAdcData, &data, portMAX_DELAY)) {
-            // printf("Dicionario : %d, Axis : %d, Value : %d, ", data.dici, data.axis, data.val); 
+        if (xQueueReceive(xQueueAdcData, &data, 1)) {
+           
             write_package(data);
         }
-        // if (xQueueReceive(xQueueCommands, &data, portMAX_DELAY)) {
-        //     write_package(data);
-        // }
+
+
     }
 }
 
@@ -116,12 +127,16 @@ void x1_task(void *params) {
     joystick_data_t data = {.dici = 1, .axis = 0};
     while (1) {
         adc_select_input(0); // ADC Channel 0
-        if ((adc_read() - 2047) / 8 > -170 && (adc_read() - 2047) / 8 < 170) {
+        int adc_x = adc_read();
+
+        if ((adc_x - 2047) / 8 > -100 && (adc_x - 2047) / 8 < 100) {
             data.val = 0;
         } else {
-            data.val = (adc_read() - 2047) / 12;  // Lê o valor ADC do eixo X
+            data.val = (adc_x - 2047) / 12;  // Lê o valor ADC do eixo X
         }
-        xQueueSend(xQueueAdcData, &data, portMAX_DELAY);
+        if(data.val !=0){
+        xQueueSend(xQueueAdcData, &data, 1);
+        }
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
@@ -131,12 +146,16 @@ void y1_task(void *params) {
     joystick_data_t data = {.dici = 1, .axis = 1};
     while (1) {
         adc_select_input(1); // ADC Channel 1
-        if ((adc_read() - 2047) / 8 > -170 && (adc_read() - 2047) / 8 < 170) {
+        int adc_x = adc_read();
+
+        if ((adc_x- 2047) / 8 > -100 && (adc_x - 2047) / 8 < 100) {
             data.val = 0;
         } else {
-            data.val = (adc_read() - 2047) / 12;  // Lê o valor ADC do eixo X
+            data.val = (adc_x - 2047) / 12;  // Lê o valor ADC do eixo X
         }
-        xQueueSend(xQueueAdcData, &data, portMAX_DELAY);
+         if(data.val !=0){
+            xQueueSend(xQueueAdcData, &data, 1);
+        }
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
@@ -154,7 +173,7 @@ void y1_task(void *params) {
 //         } else {
 //             data.val = 0;
 //         }
-//         xQueueSend(xQueueCommands, &data, portMAX_DELAY);
+//         xQueueSend(xQueueCommands, &data, 1);
 //         vTaskDelay(pdMS_TO_TICKS(100));
 //     }
 // }
@@ -171,13 +190,10 @@ void y1_task(void *params) {
 //         } else {
 //             data.val = 0; // Certifique-se de limpar o comando se estiver dentro do limiar
 //         }
-//         xQueueSend(xQueueCommands, &data, portMAX_DELAY);
+//         xQueueSend(xQueueCommands, &data, 1);
 //         vTaskDelay(pdMS_TO_TICKS(100));
 //     }
 // }
-
-
-
 
 void btn_callback(uint gpio, uint32_t events) {
     
@@ -188,30 +204,28 @@ void btn_callback(uint gpio, uint32_t events) {
         if (events == 0x4) {  // fall edge
             if (gpio == BUTTON_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 0, .val = 1};
-                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
+                xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_E_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 1, .val = 1};
-                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
+                xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_CTRL_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 2, .val = 1};
-                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
+                xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_SHIFT_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 3, .val = 1};
-                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
             }
         } else if (events == 0x8) {  // rise edge
             if (gpio == BUTTON_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 0, .val = 0};
-                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
+                xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_E_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 1, .val = 0};
-                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
+                xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_CTRL_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 2, .val = 0};
-                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
+                xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_SHIFT_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 3, .val = 0};
-                xQueueSendToFront(xQueueAdcData, &data, portMAX_DELAY);
             }
         }
         // Atualize o último tempo de debounce processado
@@ -227,8 +241,8 @@ void btn_callback(uint gpio, uint32_t events) {
 int main() {
     stdio_init_all();
     adc_init(); // Inicializa o ADC
-    uart_init(uart0, 115200);  // Configura a UART0 para 115200 bps
-    printf("HELLO WORLD");
+    uart_init(HC06_UART_ID, 9600);  // Configura a UART0 para 115200 bps
+    //printf("HELLO WORLD");
 
     // Configura os pinos GPIO para o ADC
     adc_gpio_init(ADC_PIN_X1);
@@ -246,6 +260,11 @@ int main() {
     gpio_init(BUTTON_CTRL_PIN);
     gpio_set_dir(BUTTON_CTRL_PIN, GPIO_IN);
     gpio_pull_up(BUTTON_CTRL_PIN);
+
+    
+    gpio_init(TREMER_PIN);
+    gpio_set_dir(TREMER_PIN, GPIO_OUT);
+
     gpio_set_irq_enabled_with_callback(BUTTON_PIN,
                                      GPIO_IRQ_EDGE_RISE | 
                                      GPIO_IRQ_EDGE_FALL, 
@@ -268,7 +287,9 @@ int main() {
                                      &btn_callback);
     
     
-    xQueueAdcData = xQueueCreate(10, sizeof(joystick_data_t));
+    xQueueAdcData = xQueueCreate(2, sizeof(joystick_data_t));
+    xQueueButtonData = xQueueCreate(10, sizeof(joystick_data_t));
+
     //xQueueCommands = xQueueCreate(10, sizeof(joystick_data_t));
     // printf("Start bluetooth task\n");
 
