@@ -33,10 +33,7 @@ const uint BUTTON_ME_PIN = 8;
 #define DEBOUNCE_TIME_MS 50  // Tempo de debounce em milissegundos
 
 // Variável para armazenar a última vez que o botão foi pressionado
-static uint32_t lastDebounceTimeButton = 0;
-static uint32_t lastDebounceTimeButtonE = 0;
-static uint32_t lastDebounceTimeButtonCtrl = 0;
-static uint32_t lastDebounceTimeButtonShift = 0;
+volatile uint32_t lastDebounceTimeButton = 0;
 
 QueueHandle_t xQueueAdcData;
 QueueHandle_t xQueueButtonData;
@@ -267,9 +264,6 @@ void btn_callback(uint gpio, uint32_t events) {
         }
         // Atualize o último tempo de debounce processado
         lastDebounceTimeButton = currentTime;
-        lastDebounceTimeButtonE = currentTime;
-        lastDebounceTimeButtonCtrl = currentTime;
-        lastDebounceTimeButtonShift = currentTime;
     }
 }
 // Função para formatar e enviar dados ou comandos via UART
