@@ -315,7 +315,7 @@ int main() {
     xTaskCreate(x1_task, "X1_Task", 256, NULL, 1, NULL);
     xTaskCreate(y1_task, "Y1_Task", 256, NULL, 1, NULL);
     xTaskCreate(hc06_task, "UART_Task 1", 4096, NULL, 1, NULL);
-    //xTaskCreate(tremor_task, "Tremor_Task", 256, NULL, 1, NULL);
+    xTaskCreate(tremor_task, "Tremor_Task", 256, NULL, 1, NULL);
      // xTaskCreate(x2_task, "X2_Task", 256, NULL, 1, NULL);
     // xTaskCreate(y2_task, "Y2_Task", 256, NULL, 1, NULL);
     // xTaskCreate(uart_task, "UART_Task", 256, NULL, 1, NULL);
