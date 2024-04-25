@@ -33,7 +33,7 @@ const uint BUTTON_ME_PIN = 8;
 #define DEBOUNCE_TIME_MS 50  // Tempo de debounce em milissegundos
 
 // Variável para armazenar a última vez que o botão foi pressionado
-volatile uint32_t lastDebounceTimeButton = 0;
+
 
 QueueHandle_t xQueueAdcData;
 QueueHandle_t xQueueButtonData;
@@ -195,6 +195,7 @@ void y1_task(void *params) {
 // }
 
 void btn_callback(uint gpio, uint32_t events) {
+    static uint32_t lastDebounceTimeButton = 0;
     
     uint32_t currentTime = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
