@@ -3,7 +3,7 @@ import uinput
 import pynput.keyboard
 import time
 
-ser = serial.Serial('/dev/rfcomm1', 115200, timeout=100)
+ser = serial.Serial('/dev/rfcomm0', 115200, timeout=100)
 # ser = serial.Serial('/dev/ttyACM0', 115200)
 
 
@@ -26,7 +26,6 @@ teclado = uinput.Device([
 	uinput.KEY_S,
 	uinput.KEY_D,
 ])
-
 
 
 def parse_data(data):

@@ -80,7 +80,6 @@ void write_package(joystick_data_t data) {
     }else if(data.dici == 3){
         int msb = data.val >> 8;
         int lsb = data.val & 0xFF;
-        // printf("SERA??");
         uart_putc_raw(HC06_UART_ID, 3);  
         uart_putc_raw(HC06_UART_ID, data.axis);  
         uart_putc_raw(HC06_UART_ID, lsb);
@@ -100,18 +99,12 @@ void hc06_task(void *params) {
     joystick_data_t data;
     while (1) {
         if (xQueueReceive(xQueueAdcData, &data, 1)) {
-            if(data.dici != 1){
-                // printf("Dicionario : %d, Axis : %d, Value : %d, ", data.dici, data.axis, data.val);                 
-            }
             write_package(data);
             vTaskDelay(10);
             write_package(data);
             //printf("%d,%d",data.axis, data.val);
         }
         if  (xQueueReceive(xQueueButtonData, &data, 1)) {
-            if(data.dici != 1){
-                // printf("Dicionario : %d, Axis : %d, Value : %d, ", data.dici, data.axis, data.val);                 
-            }
             write_package(data);
             //printf("%d,%d",data.axis, data.val);
         }
@@ -138,7 +131,7 @@ void x1_task(void *params) {
         adc_select_input(0); // ADC Channel 0
         int adc_x = adc_read();
 
-        if ((adc_x - 1900) / 12 > -183 && (adc_x - 1900) / 12 < 183) {
+        if ((adc_x - 1900) / 12 > -70 && (adc_x - 1900) / 12 < 70) {
             data.val = 0;
         } else {
             data.val = (adc_x - 1900) / 12;  // Lê o valor ADC do eixo X
@@ -157,7 +150,7 @@ void y1_task(void *params) {
         adc_select_input(1); // ADC Channel 1
         int adc_x = adc_read();
 
-        if ((adc_x- 1900) / 12 > -183 && (adc_x - 1900) / 12 < 183) {
+        if ((adc_x- 1900) / 12 > -70 && (adc_x - 1900) / 12 < 70) {
             data.val = 0;
         } else {
             data.val = (adc_x - 1900) / 12;  // Lê o valor ADC do eixo Y
@@ -376,11 +369,10 @@ int main() {
                                      true,
                                      &btn_callback);
     gpio_set_irq_enabled_with_callback(BUTTON_ME_PIN,
-                                     GPIO_IRQ_EDGE_RISE | 
-                                     GPIO_IRQ_EDGE_FALL, 
-                                     true,
-                                     &btn_callback);
-
+                                   GPIO_IRQ_EDGE_RISE | 
+                                   GPIO_IRQ_EDGE_FALL, 
+                                   true,
+                                   &btn_callback);
 
     xQueueAdcData = xQueueCreate(2, sizeof(joystick_data_t));
     xQueueButtonData = xQueueCreate(10, sizeof(joystick_data_t));
