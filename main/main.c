@@ -22,6 +22,14 @@ const uint BUTTON_CTRL_PIN = 17;
 const uint BUTTON_SHIFT_PIN = 18;
 const int TREMER_PIN = 9;
 
+const uint BUTTON_A_PIN = 13;
+const uint BUTTON_W_PIN = 12;
+const uint BUTTON_S_PIN = 11;
+const uint BUTTON_D_PIN = 10;
+
+const uint BUTTON_ME_PIN = 8;
+
+
 #define DEBOUNCE_TIME_MS 50  // Tempo de debounce em milissegundos
 
 // Variável para armazenar a última vez que o botão foi pressionado
@@ -86,7 +94,7 @@ void hc06_task(void *params) {
     uart_init(HC06_UART_ID, HC06_BAUD_RATE);
     gpio_set_function(HC06_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(HC06_RX_PIN, GPIO_FUNC_UART);
-    //hc06_init("APS2_JB", "1234");
+    hc06_init("APS2_JB", "1234");
 
 
     joystick_data_t data;
@@ -130,13 +138,13 @@ void x1_task(void *params) {
         adc_select_input(0); // ADC Channel 0
         int adc_x = adc_read();
 
-        if ((adc_x - 2047) / 8 > -100 && (adc_x - 2047) / 8 < 100) {
+        if ((adc_x - 1900) / 12 > -183 && (adc_x - 1900) / 12 < 183) {
             data.val = 0;
         } else {
-            data.val = (adc_x - 2047) / 12;  // Lê o valor ADC do eixo X
+            data.val = (adc_x - 1900) / 12;  // Lê o valor ADC do eixo X
         }
         if(data.val !=0){
-        xQueueSend(xQueueAdcData, &data, 1);
+            xQueueSend(xQueueAdcData, &data, 1);
         }
         vTaskDelay(pdMS_TO_TICKS(100));
     }
@@ -149,12 +157,12 @@ void y1_task(void *params) {
         adc_select_input(1); // ADC Channel 1
         int adc_x = adc_read();
 
-        if ((adc_x- 2047) / 8 > -100 && (adc_x - 2047) / 8 < 100) {
+        if ((adc_x- 1900) / 12 > -183 && (adc_x - 1900) / 12 < 183) {
             data.val = 0;
         } else {
-            data.val = (adc_x - 2047) / 12;  // Lê o valor ADC do eixo X
+            data.val = (adc_x - 1900) / 12;  // Lê o valor ADC do eixo Y
         }
-         if(data.val !=0){
+        if(data.val !=0){
             xQueueSend(xQueueAdcData, &data, 1);
         }
         vTaskDelay(pdMS_TO_TICKS(100));
@@ -218,6 +226,21 @@ void btn_callback(uint gpio, uint32_t events) {
             }if (gpio == BUTTON_SHIFT_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 3, .val = 1};
                 xQueueSendToFront(xQueueButtonData, &data, 0);
+            }if (gpio == BUTTON_A_PIN) {//A
+                joystick_data_t data = {.dici = 3, .axis = 4, .val = 1};
+                xQueueSendToFront(xQueueButtonData, &data, 0);
+            }if (gpio == BUTTON_W_PIN) {//W
+                joystick_data_t data = {.dici = 3, .axis = 5, .val = 1};
+                xQueueSendToFront(xQueueButtonData, &data, 0);
+            }if (gpio == BUTTON_S_PIN) {//S
+                joystick_data_t data = {.dici = 3, .axis = 6, .val = 1};
+                xQueueSendToFront(xQueueButtonData, &data, 0);
+            }if (gpio == BUTTON_D_PIN) {//D
+                joystick_data_t data = {.dici = 3, .axis = 7, .val = 1};
+                xQueueSendToFront(xQueueButtonData, &data, 0);
+            }if (gpio == BUTTON_ME_PIN) {//MOUSE
+                joystick_data_t data = {.dici = 3, .axis = 8, .val = 1};
+                xQueueSendToFront(xQueueButtonData, &data, 0);
             }
         } else if (events == 0x8) {  // rise edge
             if (gpio == BUTTON_PIN) {
@@ -231,6 +254,21 @@ void btn_callback(uint gpio, uint32_t events) {
                 xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_SHIFT_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 3, .val = 0};
+                xQueueSendToFront(xQueueButtonData, &data, 0);
+            }if (gpio == BUTTON_A_PIN) {//A
+                joystick_data_t data = {.dici = 3, .axis = 4, .val = 0};
+                xQueueSendToFront(xQueueButtonData, &data, 0);
+            }if (gpio == BUTTON_W_PIN) {//W
+                joystick_data_t data = {.dici = 3, .axis = 5, .val = 0};
+                xQueueSendToFront(xQueueButtonData, &data, 0);
+            }if (gpio == BUTTON_S_PIN) {//S
+                joystick_data_t data = {.dici = 3, .axis = 6, .val = 0};
+                xQueueSendToFront(xQueueButtonData, &data, 0);
+            }if (gpio == BUTTON_D_PIN) {//D
+                joystick_data_t data = {.dici = 3, .axis = 7, .val = 0};
+                xQueueSendToFront(xQueueButtonData, &data, 0);
+            }if (gpio == BUTTON_ME_PIN) {//MOUSE
+                joystick_data_t data = {.dici = 3, .axis = 8, .val = 0};
                 xQueueSendToFront(xQueueButtonData, &data, 0);
             }
         }
@@ -249,14 +287,15 @@ void tremor_task(void *params) {
         if (xSemaphoreTake(xSemaphoreTremor, portMAX_DELAY) == pdTRUE) {
             gpio_put(TREMER_PIN, 1);  // Ligar tremor
             vTaskDelay(pdMS_TO_TICKS(200)); // Tremor ligado por 200 ms
-            gpio_put(TREMER_PIN, 0);  // Desligar tremor
+            gpio_put(TREMER_PIN, 0);  // Desligar tremor/* /*  */
         }
     }
 }
 
+
 int main() {
     stdio_init_all();
-    adc_init(); // Inicializa o ADC
+    adc_init(); // Inicializa o ADC */
     uart_init(HC06_UART_ID, 9600);  // Configura a UART0 para 115200 bps
     //printf("HELLO WORLD");
 
@@ -276,6 +315,21 @@ int main() {
     gpio_init(BUTTON_CTRL_PIN);
     gpio_set_dir(BUTTON_CTRL_PIN, GPIO_IN);
     gpio_pull_up(BUTTON_CTRL_PIN);
+    gpio_init(BUTTON_A_PIN);
+    gpio_set_dir(BUTTON_A_PIN, GPIO_IN);
+    gpio_pull_up(BUTTON_A_PIN);
+    gpio_init(BUTTON_W_PIN);
+    gpio_set_dir(BUTTON_W_PIN, GPIO_IN);
+    gpio_pull_up(BUTTON_W_PIN);
+    gpio_init(BUTTON_S_PIN);
+    gpio_set_dir(BUTTON_S_PIN, GPIO_IN);
+    gpio_pull_up(BUTTON_S_PIN);
+    gpio_init(BUTTON_D_PIN);
+    gpio_set_dir(BUTTON_D_PIN, GPIO_IN);
+    gpio_pull_up(BUTTON_D_PIN);
+    gpio_init(BUTTON_ME_PIN);
+    gpio_set_dir(BUTTON_ME_PIN, GPIO_IN);
+    gpio_pull_up(BUTTON_ME_PIN);
 
     
     gpio_init(TREMER_PIN);
@@ -301,8 +355,33 @@ int main() {
                                      GPIO_IRQ_EDGE_FALL, 
                                      true,
                                      &btn_callback);
-    
-    
+    gpio_set_irq_enabled_with_callback(BUTTON_A_PIN,
+                                     GPIO_IRQ_EDGE_RISE | 
+                                     GPIO_IRQ_EDGE_FALL, 
+                                     true,
+                                     &btn_callback);    
+    gpio_set_irq_enabled_with_callback(BUTTON_W_PIN,
+                                     GPIO_IRQ_EDGE_RISE | 
+                                     GPIO_IRQ_EDGE_FALL, 
+                                     true,
+                                     &btn_callback);
+    gpio_set_irq_enabled_with_callback(BUTTON_S_PIN,
+                                     GPIO_IRQ_EDGE_RISE | 
+                                     GPIO_IRQ_EDGE_FALL, 
+                                     true,
+                                     &btn_callback);
+    gpio_set_irq_enabled_with_callback(BUTTON_D_PIN,
+                                     GPIO_IRQ_EDGE_RISE | 
+                                     GPIO_IRQ_EDGE_FALL, 
+                                     true,
+                                     &btn_callback);
+    gpio_set_irq_enabled_with_callback(BUTTON_ME_PIN,
+                                     GPIO_IRQ_EDGE_RISE | 
+                                     GPIO_IRQ_EDGE_FALL, 
+                                     true,
+                                     &btn_callback);
+
+
     xQueueAdcData = xQueueCreate(2, sizeof(joystick_data_t));
     xQueueButtonData = xQueueCreate(10, sizeof(joystick_data_t));
 

@@ -22,6 +22,9 @@
         "stdlib.h": "c",
         "hc06.h": "c",
         "stdio.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "queue.h": "c",
+        "task.h": "c",
+        "semphr.h": "c"
     }
 }

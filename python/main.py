@@ -21,6 +21,10 @@ teclado = uinput.Device([
 	uinput.KEY_E,
 	uinput.KEY_LEFTSHIFT, 
     uinput.KEY_LEFTCTRL,
+	uinput.KEY_A,
+	uinput.KEY_W,
+	uinput.KEY_S,
+	uinput.KEY_D,
 ])
 
 
@@ -89,7 +93,17 @@ try:
 				teclado.emit(uinput.KEY_LEFTCTRL, value)
 			elif axis == 3:
 				teclado.emit(uinput.KEY_LEFTSHIFT, value)
-
+			elif axis == 4:
+				teclado.emit(uinput.KEY_A, value)
+			elif axis == 5:
+				teclado.emit(uinput.KEY_W, value)
+			elif axis == 6:
+				teclado.emit(uinput.KEY_S, value)
+			elif axis == 7:
+				teclado.emit(uinput.KEY_D, value)
+			elif axis == 8:
+				print("value: ",value)
+				device.emit(uinput.BTN_LEFT, value)
 
 
 			
