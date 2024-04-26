@@ -1,45 +1,41 @@
+#include "main.h"
 
+// Inicialização das bibliotecas
 #include <FreeRTOS.h>
 #include <task.h>
 #include <queue.h>
-
-#include "pico/stdlib.h"
-#include <stdio.h>
-#include "hardware/adc.h"
 #include <semphr.h>
 
-#include <string.h>
-
+#include "pico/stdlib.h"
+#include "hardware/adc.h"
 #include "hc06.h"
-// Definições dos pinos para os joysticks
-const uint ADC_PIN_X1 = 26; // GPIO 26, ADC Channel 0
-const uint ADC_PIN_Y1 = 27; // GPIO 27, ADC Channel 1
-// const uint ADC_PIN_X2 = 28; // GPIO 28, ADC Channel 2
 
+// Definições dos pinos
+const uint ADC_PIN_X1 = 26;
+const uint ADC_PIN_Y1 = 27;
 const uint BUTTON_PIN = 15;
 const uint BUTTON_E_PIN = 16;
 const uint BUTTON_CTRL_PIN = 17;
 const uint BUTTON_SHIFT_PIN = 18;
-const int TREMER_PIN = 9;
-
 const uint BUTTON_A_PIN = 13;
 const uint BUTTON_W_PIN = 12;
 const uint BUTTON_S_PIN = 11;
 const uint BUTTON_D_PIN = 10;
-
 const uint BUTTON_ME_PIN = 8;
+const int TREMER_PIN = 9;
 
-#define DEBOUNCE_TIME_MS 50  // Tempo de debounce em milissegundos
+#define DEBOUNCE_TIME_MS 50
 
+// Declaração das queues e semáforo
 QueueHandle_t xQueueAdcData;
 QueueHandle_t xQueueButtonData;
-//QueueHandle_t xQueueCommands;
 SemaphoreHandle_t xSemaphoreTremor;
 
+// Estrutura de dados para joystick
 typedef struct {
-    int dici;  // Dicionario [1 -- joystick, 2 -- AWSD, 3 -- Botoes]
-    int axis;  // 0 para X, 1 para Y
-    int val;  // valor ou botao
+    int dici;
+    int axis;
+    int val;
 } joystick_data_t;
  
 
@@ -155,40 +151,6 @@ void y1_task(void *params) {
     }
 }
 
-// Tarefas para o joystick 2
-// void x2_task(void *params) {
-//     joystick_data_t data = {.dici = 2, .axis = 0};
-//     while (1) {
-//         adc_select_input(2); // ADC Channel 2
-//         int x_val = (adc_read() - 2047) / 8;
-//         if (x_val < -30) {
-//             data.val = 1; //A
-//         } else if (x_val > 30) {
-//             data.val = 2; //D
-//         } else {
-//             data.val = 0;
-//         }
-//         xQueueSend(xQueueCommands, &data, 1);
-//         vTaskDelay(pdMS_TO_TICKS(100));
-//     }
-// }
-
-// void y2_task(void *params) {
-//     joystick_data_t data = {.dici = 2, .axis = 0};
-//     while (1) {
-//         adc_select_input(3); // ADC Channel 3
-//         int y_val = (adc_read() - 2047) / 8;
-//         if (y_val < -30) {
-//             data.val = 3; //S
-//         } else if (y_val > 30) {
-//             data.val = 4; //W
-//         } else {
-//             data.val = 0; // Certifique-se de limpar o comando se estiver dentro do limiar
-//         }
-//         xQueueSend(xQueueCommands, &data, 1);
-//         vTaskDelay(pdMS_TO_TICKS(100));
-//     }
-// }
 
 void btn_callback(uint gpio, uint32_t events) {
     static uint32_t lastDebounceTimeButton = 0;
@@ -368,17 +330,11 @@ int main() {
 
     xSemaphoreTremor = xSemaphoreCreateBinary();
 
-    //xQueueCommands = xQueueCreate(10, sizeof(joystick_data_t));
-    // printf("Start bluetooth task\n");
-
     // Cria tarefas para cada eixo de cada joystick
     xTaskCreate(x1_task, "X1_Task", 256, NULL, 1, NULL);
     xTaskCreate(y1_task, "Y1_Task", 256, NULL, 1, NULL);
     xTaskCreate(hc06_task, "UART_Task 1", 4096, NULL, 1, NULL);
     xTaskCreate(tremor_task, "Tremor_Task", 256, NULL, 1, NULL);
-     // xTaskCreate(x2_task, "X2_Task", 256, NULL, 1, NULL);
-    // xTaskCreate(y2_task, "Y2_Task", 256, NULL, 1, NULL);
-    // xTaskCreate(uart_task, "UART_Task", 256, NULL, 1, NULL);
 
     vTaskStartScheduler(); // Inicia o escalonador
 
