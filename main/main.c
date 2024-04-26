@@ -29,11 +29,7 @@ const uint BUTTON_D_PIN = 10;
 
 const uint BUTTON_ME_PIN = 8;
 
-
 #define DEBOUNCE_TIME_MS 50  // Tempo de debounce em milissegundos
-
-// Variável para armazenar a última vez que o botão foi pressionado
-
 
 QueueHandle_t xQueueAdcData;
 QueueHandle_t xQueueButtonData;
@@ -131,7 +127,7 @@ void x1_task(void *params) {
         if ((adc_x - 1900) / 12 > -70 && (adc_x - 1900) / 12 < 70) {
             data.val = 0;
         } else {
-            data.val = (adc_x - 1900) / 12;  // Lê o valor ADC do eixo X
+            data.val = ((adc_x - 1900) / 12)*(-1);  // Lê o valor ADC do eixo X
         }
         if(data.val !=0){
             xQueueSend(xQueueAdcData, &data, 1);
@@ -150,7 +146,7 @@ void y1_task(void *params) {
         if ((adc_x- 1900) / 12 > -70 && (adc_x - 1900) / 12 < 70) {
             data.val = 0;
         } else {
-            data.val = (adc_x - 1900) / 12;  // Lê o valor ADC do eixo Y
+            data.val = ((adc_x - 1900) / 12)*(-1);  // Lê o valor ADC do eixo Y
         }
         if(data.val !=0){
             xQueueSend(xQueueAdcData, &data, 1);
@@ -204,15 +200,12 @@ void btn_callback(uint gpio, uint32_t events) {
         if (events == 0x4) {  // fall edge
             if (gpio == BUTTON_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 0, .val = 1};
-                xSemaphoreGiveFromISR(xSemaphoreTremor, NULL);
                 xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_E_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 1, .val = 1};
-                xSemaphoreGiveFromISR(xSemaphoreTremor, NULL);
                 xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_CTRL_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 2, .val = 1};
-                xSemaphoreGiveFromISR(xSemaphoreTremor, NULL);
                 xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_SHIFT_PIN) {
                 joystick_data_t data = {.dici = 3, .axis = 3, .val = 1};
@@ -230,6 +223,7 @@ void btn_callback(uint gpio, uint32_t events) {
                 joystick_data_t data = {.dici = 3, .axis = 7, .val = 1};
                 xQueueSendToFront(xQueueButtonData, &data, 0);
             }if (gpio == BUTTON_ME_PIN) {//MOUSE
+                xSemaphoreGiveFromISR(xSemaphoreTremor, NULL);
                 joystick_data_t data = {.dici = 3, .axis = 8, .val = 1};
                 xQueueSendToFront(xQueueButtonData, &data, 0);
             }
