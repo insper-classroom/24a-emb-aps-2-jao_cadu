@@ -89,9 +89,9 @@ try:
 			elif axis == 1:
 				teclado.emit(uinput.KEY_E, value)
 			elif axis == 2:
-				teclado.emit(uinput.KEY_LEFTCTRL, value)
-			elif axis == 3:
 				teclado.emit(uinput.KEY_LEFTSHIFT, value)
+			elif axis == 3:
+				teclado.emit(uinput.KEY_LEFTCTRL, value)
 			elif axis == 4:
 				teclado.emit(uinput.KEY_A, value)
 			elif axis == 5:
