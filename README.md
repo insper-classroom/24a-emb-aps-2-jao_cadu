@@ -62,7 +62,8 @@ Com propósito da matéria foram feitos os seguintes conceitos para aumentar a n
 - Utiliza algum componente não visto em sala de aula (o vibrador por meio do TREMER_PIN, utilizado quando o usuário aperta a botão esquerdo do mouse, para dar mais sentimento visando jogos de tiros)
 - Está dividido em arquivos .c e .h
 - Entrega vídeo TOP/ stonks:
-    - https://drive.google.com/file/d/1W-jNMnVNY4HZ2povQq3fkgTx9mXg_YHf/view?usp=drivesdk
+    - https://www.youtube.com/watch?v=tx3T8xUGYB4
+    
     
 
 
